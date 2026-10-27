@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rock-Paper-Scissors</title>
+    <style>
+        /* Basic page layout */
+        body {
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #172033;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .game {
+            background: white;
+            width: 100%;
+            max-width: 440px;
+            padding: 28px;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        h1 { margin-top: 0; }
+        .rules {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 10px;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+
+        .choices {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 18px 0;
+        }
+
+        button {
+            border: 0;
+            border-radius: 10px;
+            padding: 12px 15px;
+            font-size: 15px;
+            cursor: pointer;
+            background: #2563eb;
+            color: white;
+        }
+
+        button:hover { background: #1d4ed8; }
+        button:disabled { opacity: 0.6; cursor: wait; }
+
+        #result {
+            margin-top: 20px;
+            padding: 14px;
+            background: #f8fafc;
+            border-radius: 10px;
+            line-height: 1.8;
+            min-height: 80px;
+        }
+
+        #play-again {
+            margin-top: 12px;
+            background: #475569;
+        }
+
+        #message { color: #b91c1c; }
+    </style>
+</head>
+<body>
+    <main class="game">
+        <h1>Rock-Paper-Scissors</h1>
+        <p>Choose your move and try to beat the computer!</p>
+
+        <section class="rules">
+            <strong>Winning rules</strong><br>
+            Rock beats Scissors<br>
+            Scissors beats Paper<br>
+            Paper beats Rock
+        </section>
+
+        <!-- These buttons send your selection to the Python backend -->
+        <div class="choices">
+            <button class="choice" data-choice="1">🪨 Rock</button>
+            <button class="choice" data-choice="2">📄 Paper</button>
+            <button class="choice" data-choice="3">✂️ Scissors</button>
+        </div>
+
+        <!-- The game result will be shown in this box -->
+        <div id="result" aria-live="polite">
+            Your choice and the computer's choice will appear here.
+        </div>
+        <p id="message" role="alert"></p>
+
+        <button id="play-again">Reset Round</button>
+    </main>
+
+    <script>
+        // Get the buttons and result areas from the page
+        const choiceButtons = document.querySelectorAll(".choice");
+        const resultBox = document.getElementById("result");
+        const message = document.getElementById("message");
+        const resetButton = document.getElementById("play-again");
+
+        // Send a move to Python and show the returned result
+        async function play(choice) {
+            message.textContent = "";
+            resultBox.textContent = "Computer is choosing...";
+            choiceButtons.forEach(button => button.disabled = true);
+
+            try {
+                const response = await fetch("/play", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ choice: choice })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Something went wrong.");
+                }
+
+                // Use textContent so the returned data is displayed safely
+                resultBox.textContent =
+                    "You chose: " + data.user_choice + "\n" +
+                    "Computer chose: " + data.computer_choice + "\n" +
+                    data.result;
+                resultBox.style.whiteSpace = "pre-line";
+            } catch (error) {
+                resultBox.textContent = "The game could not complete this round.";
+                message.textContent = error.message;
+            } finally {
+                choiceButtons.forEach(button => button.disabled = false);
+            }
+        }
+
+        // Start a round when one of the move buttons is clicked
+        choiceButtons.forEach(button => {
+            button.addEventListener("click", () => play(button.dataset.choice));
+        });
+
+        // Clear the previous result for a new round
+        resetButton.addEventListener("click", () => {
+            resultBox.textContent = "Choose Rock, Paper, or Scissors to start a new round.";
+            message.textContent = "";
+        });
+    </script>
+</body>
+</html>
